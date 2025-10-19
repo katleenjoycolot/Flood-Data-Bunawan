@@ -1,4 +1,4 @@
-# app.py
+this code is already fix i need you to add css code that the navigation and side bar has a pink theme color make it compatible and important visible text                                       # app.py
 # Flood Pattern Data Mining & Forecasting - Streamlit Port of floodpatternv2.ipynb
 # Interactive Plotly charts + automatic explanations below each output
 # Author: ChatGPT (converted for Streamlit)
@@ -20,9 +20,21 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings("ignore")
+# --- Add this block for design customization ---
+
+st.set_page_config(
+    layout="wide",
+    page_title="Flood Pattern Analysis Dashboard",
+    page_icon="🌊",
+)
 
 
-st.set_page_config(layout="wide", page_title="Flood Pattern Analysis Dashboard")
+
+# --- Custom title container ---
+st.markdown('<div class="main-title">🌊 DATA MINING FLOOD PATTERN 🌊</div>', unsafe_allow_html=True)
+
+
+st.set_page_config(layout="wide", page_title="🌊 Flood Analysis Dashboard 🌊")
 
 # ------------------------------
 # Helpers: Cleaning & Preprocess
@@ -293,6 +305,7 @@ with tabs[0]:
         })
         st.table(col_df)
 
+
 # ------------------------------
 # Cleaning & EDA Tab
 # ------------------------------
@@ -317,74 +330,19 @@ with tabs[1]:
             if show_explanations:
                 st.markdown("**Explanation:** This histogram shows distribution of `Water Level` after cleaning non-numeric characters and imputing missing values with the median. The boxplot margin highlights potential outliers. Use this to detect skew and extreme events.")
 
-    # Monthly flood probability
-import calendar
-import plotly.express as px
-import streamlit as st
-import pandas as pd
-
-if 'Month' in df.columns:
-    # create flood_occurred column if not exists
-    if 'flood_occurred' not in df.columns:
-        df['flood_occurred'] = (df['Water Level'].fillna(0) > 0).astype(int)
-
-    st.subheader("Monthly Flood Probability")
-
-    # --- SAFE month name conversion ---
-    def get_month_name(val):
-        """Return proper month name from number or string."""
-        if pd.isnull(val):
-            return None
-        try:
-            num = int(val)
-            if 1 <= num <= 12:
-                return calendar.month_name[num]
-        except:
-            pass
-        # if already text like "Jan" or "January"
-        val_str = str(val).strip().title()
-        months = {m: m for m in calendar.month_name[1:]}
-        months_abbr = {m: calendar.month_name[i] for i, m in enumerate(calendar.month_abbr) if m}
-        all_months = {**months, **months_abbr}
-        return all_months.get(val_str, None)
-
-    df['Month_Name'] = df['Month'].apply(get_month_name)
-
-    # drop rows with invalid month values
-    valid_df = df.dropna(subset=['Month_Name'])
-
-    if not valid_df.empty:
-        # group and calculate flood probability
-        m_stats = valid_df.groupby('Month_Name')['flood_occurred'].agg(['sum', 'count']).reset_index()
-        m_stats['probability'] = m_stats['sum'] / m_stats['count']
-
-        # sort by chronological order (Jan–Dec)
-        m_stats['Month_Number'] = m_stats['Month_Name'].apply(lambda x: list(calendar.month_name).index(x))
-        m_stats = m_stats.sort_values('Month_Number')
-
-        # plot
-        fig = px.bar(
-            m_stats,
-            x='Month_Name',
-            y='probability',
-            title="Flood Probability by Month",
-            text='probability'
-        )
-        fig.update_traces(texttemplate='%{text:.2f}', textposition='outside')
-        fig.update_layout(xaxis_title="Month", yaxis_title="Flood Probability")
-        st.plotly_chart(fig, use_container_width=True)
-
-        # explanation
-        if show_explanations:
-            st.markdown("""
-            **Explanation:**  
-            Probability = (# of rows with Water Level > 0) ÷ (total rows in that month).  
-            Higher bars mean that the month historically had more flood occurrences in your dataset.
-            """)
-    else:
-        st.warning("⚠️ No valid month values found in the 'Month' column.")
-
-
+        # Monthly flood probability
+        if 'Month' in df.columns:
+            # create flood_occurred column if not exists
+            if 'flood_occurred' not in df.columns:
+                df['flood_occurred'] = (df['Water Level'].fillna(0) > 0).astype(int)
+            st.subheader("Monthly flood probability")
+            m_stats = df.groupby('Month')['flood_occurred'].agg(['sum','count']).reset_index()
+            m_stats['probability'] = m_stats['sum']/m_stats['count']
+            m_stats = m_stats.sort_values('probability', ascending=False)
+            fig = px.bar(m_stats, x='Month', y='probability', title="Flood Probability by Month", text='probability')
+            st.plotly_chart(fig, use_container_width=True)
+            if show_explanations:
+                st.markdown("**Explanation:** Probability = (# rows with Water Level>0) / (rows per month). Higher bars mean that month historically had more flood occurrences in your dataset.")
 
         # Municipal flood probabilities
         if 'Municipality' in df.columns:
@@ -396,7 +354,6 @@ if 'Month' in df.columns:
             st.plotly_chart(fig, use_container_width=True)
             if show_explanations:
                 st.markdown("**Explanation:** This helps prioritize which municipalities to focus preparedness efforts on.")
-
 
 # ------------------------------
 # Clustering Tab (KMeans)
@@ -603,7 +560,6 @@ with tabs[4]:
 
         except Exception as e:
             st.error(f"❌ Could not train severity model: {e}")
-
 
 # ------------------------------
 # Time Series (SARIMA)
