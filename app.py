@@ -273,7 +273,7 @@ with tabs[0]:
                 'Month': ['JANUARY', 'FEBRUARY', 'DECEMBER', 'FEBRUARY', 'MAY', 'NOVEMBER'],
                 'Day': [10, 5, 12, 20, 1, 15],
                 'Municipality': ['Bunawan'] * 6,
-                'Barangay': ['Poblacion', 'Imelda', 'Poblacion', 'Mambalili', 'Bunawan Brook', 'Poblacion'],
+                'Barangay': ['Nueva Era', 'Imelda', 'Poblacion', 'Mambalili', 'Bunawan Brook', 'San Marcos', 'San Teodoro', 'Consuelo', , 'Libertad', 'San Andres'],
                 'Flood Cause': ['LPA', 'LPA', 'Easterlies', 'AURING', 'Shearline', 'LPA'],
                 'Water Level': ['5 ft.', '8 ft', '12ft', '20ft', 'nan', '3 ft'],
                 'No. of Families affected': [10, 20, 50, 200, 0, 5],
