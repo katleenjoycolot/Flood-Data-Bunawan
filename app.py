@@ -325,104 +325,117 @@ with tabs[1]:
         # Water Level distribution (Plotly)
         if 'Water Level' in df.columns:
             st.subheader("Water Level distribution")
-            fig = px.histogram(df, x='Water Level', nbins=30, marginal="box", title="Distribution of Cleaned Water Level")
+            fig = px.histogram(
+                df,
+                x='Water Level',
+                nbins=30,
+                marginal="box",
+                title="Distribution of Cleaned Water Level"
+            )
             st.plotly_chart(fig, use_container_width=True)
             if show_explanations:
-                st.markdown("**Explanation:** This histogram shows distribution of `Water Level` after cleaning non-numeric characters and imputing missing values with the median. The boxplot margin highlights potential outliers. Use this to detect skew and extreme events.")
+                st.markdown("""
+                **Explanation:**  
+                This histogram shows the distribution of `Water Level` after cleaning non-numeric characters
+                and filling missing values with the median.  
+                The boxplot margin highlights potential outliers.  
+                Use this to detect skew and extreme flood events.
+                """)
 
-        # Monthly flood probability
+        # ------------------------------
+        # Monthly flood probability (fixed)
+        # ------------------------------
         if 'Month' in df.columns:
             # create flood_occurred column if not exists
             if 'flood_occurred' not in df.columns:
                 df['flood_occurred'] = (df['Water Level'].fillna(0) > 0).astype(int)
-            st.subheader("Monthly flood probability")
-            m_stats = df.groupby('Month')['flood_occurred'].agg(['sum','count']).reset_index()
-            m_stats['probability'] = m_stats['sum']/m_stats['count']
-            m_stats = m_stats.sort_values('probability', ascending=False)
-            fig = px.bar(m_stats, x='Month', y='probability', title="Flood Probability by Month", text='probability')
-            st.plotly_chart(fig, use_container_width=True)
-            if show_explanations:
-                st.markdown("**Explanation:** Probability = (# rows with Water Level>0) / (rows per month). Higher bars mean that month historically had more flood occurrences in your dataset.")
 
+            st.subheader("Monthly Flood Probability")
+
+            # month mapping
+            month_map = {
+                1: 'January', 2: 'February', 3: 'March', 4: 'April',
+                5: 'May', 6: 'June', 7: 'July', 8: 'August',
+                9: 'September', 10: 'October', 11: 'November', 12: 'December'
+            }
+
+            # clean and convert month formats
+            def clean_month(val):
+                try:
+                    val_str = str(val).strip().lower()
+                    # numeric (1–12 or '01')
+                    if val_str.isdigit():
+                        num = int(val_str)
+                        return month_map.get(num, np.nan)
+                    # short text (jan, feb, mar…)
+                    for num, name in month_map.items():
+                        if val_str.startswith(name[:3].lower()):
+                            return name
+                    return np.nan
+                except:
+                    return np.nan
+
+            df['Month_clean'] = df['Month'].apply(clean_month)
+            df = df.dropna(subset=['Month_clean'])
+
+            # compute monthly stats
+            m_stats = df.groupby('Month_clean')['flood_occurred'].agg(['sum', 'count']).reset_index()
+            m_stats['probability'] = (m_stats['sum'] / m_stats['count']).round(3)
+
+            # keep months in correct order
+            m_stats['Month_clean'] = pd.Categorical(
+                m_stats['Month_clean'],
+                categories=list(month_map.values()),
+                ordered=True
+            )
+            m_stats = m_stats.sort_values('Month_clean')
+
+            # bar chart
+            fig = px.bar(
+                m_stats,
+                x='Month_clean',
+                y='probability',
+                title="Flood Probability by Month",
+                text='probability'
+            )
+            fig.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+            fig.update_layout(xaxis_title="Month", yaxis_title="Flood Probability")
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            if show_explanations:
+                st.markdown("""
+                **Explanation:**  
+                This chart shows the chance of flooding per month.  
+                - **Probability = Flood occurrences / Total records in that month**  
+                Months with higher bars indicate higher flood risk periods.  
+                """)
+
+        # ------------------------------
         # Municipal flood probabilities
+        # ------------------------------
         if 'Municipality' in df.columns:
             st.subheader("Flood probability by Municipality")
             mun = df.groupby('Municipality')['flood_occurred'].agg(['sum','count']).reset_index()
-            mun['probability'] = mun['sum']/mun['count']
+            mun['probability'] = (mun['sum'] / mun['count']).round(3)
             mun = mun.sort_values('probability', ascending=False)
-            fig = px.bar(mun, x='Municipality', y='probability', title="Flood Probability by Municipality")
+            fig = px.bar(
+                mun,
+                x='Municipality',
+                y='probability',
+                title="Flood Probability by Municipality",
+                text='probability'
+            )
+            fig.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+            fig.update_layout(xaxis_title="Municipality", yaxis_title="Flood Probability")
             st.plotly_chart(fig, use_container_width=True)
             if show_explanations:
-                st.markdown("**Explanation:** This helps prioritize which municipalities to focus preparedness efforts on.")
-# ------------------------------
-# Barangay flood probability (fixed)
-# ------------------------------
-if 'Barangay' in df.columns:
-    # create flood_occurred column if not exists
-    if 'flood_occurred' not in df.columns:
-        df['flood_occurred'] = (df['Water Level'].fillna(0) > 0).astype(int)
+                st.markdown("""
+                **Explanation:**  
+                This helps identify which municipalities historically experience more flooding,
+                guiding local preparedness and response planning.
+                """)
 
-    st.subheader("Barangay Flood Probability")
-
-    # barangay mapping
-    barangay_map = {
-        1: 'Bunawan Brook', 2: 'Consuelo', 3: 'Imelda', 4: 'Libertad',
-        5: 'Mambalili', 6: 'Nueva Era', 7: 'Poblacion', 8: 'San Andres',
-        9: 'San Marcos', 10: 'San Teodoro',
-    }
-
-    # clean and convert barangay formats
-    def clean_barangay(val):
-        try:
-            val_str = str(val).strip().lower()
-            # numeric (1–12 or '01')
-            if val_str.isdigit():
-                num = int(val_str)
-                return barangay_map.get(num, np.nan)
-            # match barangay name (partial or full)
-            for num, name in barangay_map.items():
-                if val_str.startswith(name[:3].lower()):
-                    return name
-            return np.nan
-        except:
-            return np.nan
-
-    # apply cleaning
-    df['Barangay_clean'] = df['Barangay'].apply(clean_barangay)
-    df = df.dropna(subset=['Barangay_clean'])
-
-    # compute barangay stats
-    m_stats = df.groupby('Barangay_clean')['flood_occurred'].agg(['sum', 'count']).reset_index()
-    m_stats['probability'] = (m_stats['sum'] / m_stats['count']).round(3)
-
-    # keep barangays in correct order
-    m_stats['Barangay_clean'] = pd.Categorical(
-        m_stats['Barangay_clean'],
-        categories=list(barangay_map.values()),
-        ordered=True
-    )
-    m_stats = m_stats.sort_values('Barangay_clean')
-
-    # bar chart
-    fig = px.bar(
-        m_stats,
-        x='Barangay_clean',
-        y='probability',
-        title="Flood Probability by Barangay",
-        text='probability'
-    )
-    fig.update_traces(texttemplate='%{text:.2f}', textposition='outside')
-    fig.update_layout(xaxis_title="Barangay", yaxis_title="Flood Probability")
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    if show_explanations:
-        st.markdown("""
-        **Explanation:**  
-        This chart shows the chance of flooding per barangay.  
-        - **Probability = Flood occurrences / Total records in that barangay**  
-        Barangays with higher bars indicate higher flood risk levels.  
-        """)
 # ------------------------------
 # Clustering Tab (KMeans)
 # ------------------------------
